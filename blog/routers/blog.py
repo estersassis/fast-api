@@ -3,30 +3,29 @@ from fastapi import FastAPI, Depends, status, Response, HTTPException
 from .. import schemas, models, hashing, database
 from sqlalchemy.orm import Session
 from typing import List
+from ..repository import blog
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/blog",
+    tags=['Blogs']
+)
 get_db = database.get_db
 
-@router.get('/blog', response_model=List[schemas.ShowBlog], tags=['blogs'])
+@router.get('/', response_model=List[schemas.ShowBlog])
 def get_all_blogs(db: Session = Depends(get_db)):
-    blogs = db.query(models.Blog).all()
-    return blogs
+    return blog.get_all(db)
 
-@router.post('/blog', status_code=status.HTTP_201_CREATED, tags=['blogs'])
+@router.post('/', status_code=status.HTTP_201_CREATED)
 def create_blogs(request: schemas.Blog, db: Session = Depends(get_db)):
-    new_blog = models.Blog(title=request.title, body=request.body,user_id=1)
-    db.add(new_blog)
-    db.commit()
-    db.refresh(new_blog)
-    return new_blog
+   return blog.create(request, db)
 
-@router.delete('/blog/{id}',status_code=status.HTTP_204_NO_CONTENT, tags=['blogs'])
+@router.delete('/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def destroy_blogs(id, db: Session = Depends(get_db)):
     db.query(models.Blog).filter(models.Blog.id == id).delete(synchronize_session=False)
     db.commit()
     return Response('done')
 
-@router.put('/blog/{id}',status_code=status.HTTP_202_ACCEPTED, tags=['blogs'])
+@router.put('/{id}',status_code=status.HTTP_202_ACCEPTED)
 def update_blogs(id, request: schemas.Blog, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == id)
     if not blog.first():
@@ -35,7 +34,7 @@ def update_blogs(id, request: schemas.Blog, db: Session = Depends(get_db)):
     db.commit()
     return "updated"
 
-@router.get('/blog/{id}',status_code=200, response_model=schemas.ShowBlog, tags=['blogs'])
+@router.get('/{id}',status_code=200, response_model=schemas.ShowBlog)
 def get_blog_per_id(id, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == id).first()
     if not blog:
